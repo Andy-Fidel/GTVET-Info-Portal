@@ -1,0 +1,10 @@
+/node_modules
+/public/storage
+/storage/*.key
+/bootstrap/cache
+.env.local
+.env.*.local
+.DS_Store
+vendor/
+.idea/
+*.log

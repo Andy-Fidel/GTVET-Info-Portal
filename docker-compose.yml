@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: gtvet-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-gtvet_portal}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-gtvet_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-gtvet_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - gtvet-network
+
+  # Laravel Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gtvet-api
+    restart: always
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=mysql
+      - DB_DATABASE=${DB_DATABASE:-gtvet_portal}
+      - DB_USERNAME=${DB_USERNAME:-gtvet_user}
+      - DB_PASSWORD=${DB_PASSWORD:-gtvet_password}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/vendor
+    depends_on:
+      - mysql
+    networks:
+      - gtvet-network
+    command: >
+      sh -c "composer install && 
+             php artisan migrate --seed && 
+             php artisan serve --host=0.0.0.0"
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gtvet-frontend
+    restart: always
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - gtvet-network
+    command: npm run dev
+
+  # phpMyAdmin (optional, for database management)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: gtvet-phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USERNAME:-gtvet_user}
+      PMA_PASSWORD: ${DB_PASSWORD:-gtvet_password}
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - gtvet-network
+
+volumes:
+  mysql_data:
+
+networks:
+  gtvet-network:
+    driver: bridge
