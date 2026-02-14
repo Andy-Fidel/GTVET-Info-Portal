@@ -1,0 +1,13 @@
+---
+deployment:
+  tasks:
+    # 1. Frontend Deployment: Copy dist contents to public_html
+    - /bin/cp -R frontend/dist/* /home/payola/public_html/
+
+    # 2. Backend Deployment: Sync backend files to ~/api
+    - /bin/rsync -av --exclude='.git' --exclude='node_modules' --exclude='storage' backend/ /home/payola/api/
+
+    # 3. Backend Cleanup & Optimization (optional, requires SSH access permissions)
+    - cd /home/payola/api && php artisan migrate --force
+    - cd /home/payola/api && php artisan config:cache
+---
